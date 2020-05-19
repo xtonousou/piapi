@@ -9,7 +9,14 @@ piapi implements a unique class known as **PIAPI** has the unique entry point fo
 Version
 -------
 
+### 0.1.6
+
+- Faster error handling for HTTP codes.
+- Created test file for the new error handling feature.
+
+
 ### 0.1.5
+
 - Add support for PRIME v3 API.
 - Conversion to python 3.
 
@@ -32,12 +39,6 @@ Version
 
 -   Initial release.
 
-Installation
-------------
-
-```shell
-    pip install https://github.com/tyler-guy/piapi/archive/python3.zip
-```
 
 Cisco Prime Infrastructure REST API
 ===================================
