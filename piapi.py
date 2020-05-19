@@ -1,4 +1,6 @@
-#   Copyright 2015 maximumG
+#! /usr/bin/env python3
+#
+#   Copyright 2020 maximumG, xtonousou
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -140,6 +142,21 @@ class PIAPI(object):
 
         # Disable HTTP keep_alive as advised by the API documentation
         self.session.headers['connection'] = 'close'
+        
+        # Store all the response codes in faster lookups
+        # NOTE: response and response_json MUST have the same name in _parse()
+        self.status_codes = {
+            302: ('Incorrect credentials provided{0}', '', ),
+            400: ('Invalid request: {0}', "response_json['errorDocument']['message']", ),
+            401: ('Unauthorized access{0}', '', ),
+            403: ('Forbidden access to the REST API{0}', '', ),
+            404: ('URL not found: {0}', 'response.url', ),
+            406: ('The Accept header sent in the request does not match a supported type{0}', '', ),
+            415: ('The Content-Type header sent in the request does not match a supported type{0}', '', ),
+            500: ('An error has occured during the API invocation{0}', '', ),
+            502: ('The server is down or being upgraded{0}', '', ),
+            503: ('The servers are up, but overloaded with requests. Try again later (rate limiting){0}', '', ),
+        }
 
         # Don't print warning message from request if not wanted
         if not self.verify:
@@ -161,32 +178,15 @@ class PIAPI(object):
         response_json : JSON structure
             The JSON structure from the response.
         """
-        if response.status_code == 200:
-            response_json = response.json()
+        response_json = response.json()
+        response_code = response.status_code
+        error_message = self.status_codes.get(response_code)
+        if response_code == 200:
             return response_json
-        elif response.status_code == 302:
-            raise PIAPIRequestError("Incorrect credentials provided")
-        elif response.status_code == 400:
-            response_json = response.json()
-            raise PIAPIRequestError("Invalid request: %s" % response_json["errorDocument"]["message"])
-        elif response.status_code == 401:
-            raise PIAPIRequestError("Unauthorized access")
-        elif response.status_code == 403:
-            raise PIAPIRequestError("Forbidden access to the REST API")
-        elif response.status_code == 404:
-            raise PIAPIRequestError("URL not found %s" % response.url)
-        elif response.status_code == 406:
-            raise PIAPIRequestError("The Accept header sent in the request does not match a supported type")
-        elif response.status_code == 415:
-            raise PIAPIRequestError("The Content-Type header sent in the request does not match a supported type")
-        elif response.status_code == 500:
-            raise PIAPIRequestError("An error has occured during the API invocation")
-        elif response.status_code == 502:
-            raise PIAPIRequestError("The server is down or being upgraded")
-        elif response.status_code == 503:
-            raise PIAPIRequestError("The servers are up, but overloaded with requests. Try again later (rate limiting)")
+        elif error_message:
+            raise PIAPIRequestError(error_message[0].format(eval(error_message[1])))
         else:
-            raise PIAPIRequestError("Unknown Request Error, return code is %s" % response.status_code)
+            raise PIAPIRequestError("Unknown Request Error, return code is {0}".format(response_code))
 
     def _request_wrapper(self, queue, url, params, timeout):
         """
